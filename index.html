@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四象限任務日曆系統 (Firebase 雲端同步版)</title>
+    <style>
+        :root {
+            --q1: #ff4d4d; --q2: #ffcc00; --q3: #2196F3; --q4: #9e9e9e;
+            --completed: #4caf50; --bg: #f4f7f6; --text: #333;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; padding: 10px; background: var(--bg); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 10px; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
+        .controls, .search-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        input[type="text"], select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
+        button { padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; cursor: pointer; font-weight: bold; background: #eee; transition: 0.2s; white-space: nowrap; }
+        button:hover { background: #ddd; }
+        .btn-primary { background: #2c3e50; color: white; border: none; }
+        .btn-primary:hover { background: #1a252f; }
+        .btn-warning { background: #e67e22; color: white; border: none; }
+        .btn-warning:hover { background: #d35400; }
+        
+        .cloud-status { font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
+        .status-sync { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+
+        .main-container { display: flex; gap: 15px; flex: 1; min-height: 0; overflow: hidden; flex-direction: row; }
+        
+        /* 🌟 側邊欄與四象限捲動設定 */
+        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 320px; overflow: hidden; padding-right: 5px; }
+        .quadrant-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
+        .list-section { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+        .list-section h3 { margin: 0 0 10px 0; font-size: 14px; padding-bottom: 5px; border-bottom: 2px solid; flex-shrink: 0; }
+        
+        #q1-list h3 { border-color: var(--q1); color: var(--q1); }
+        #q2-list h3 { border-color: var(--q2); color: #d4a000; }
+        #q3-list h3 { border-color: var(--q3); color: var(--q3); }
+        #q4-list h3 { border-color: var(--q4); color: #666; }
+        
+        /* 🌟 完成清單特定樣式 (摺疊) */
+        .completed-section { flex-shrink: 0; transition: max-height 0.3s ease; }
+        #completed-list h3 { border-color: var(--completed); color: var(--completed); margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+
+        /* 🌟 所有 Dropzone 加入獨立 Scroll */
+        .task-dropzone { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 5px; border: 2px dashed transparent; border-radius: 4px; overflow-y: auto; min-height: 0; }
+        .task-dropzone.dragover { background: #f0f8ff; border-color: #2196F3; }
+        #completed-zone { margin-top: 10px; max-height: 300px; } /* 展開時最高限制 */
+
+        .calendar-view { flex: 2; display: flex; gap: 5px; overflow-x: auto; background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .day-column { flex: 1; min-width: 120px; display: flex; flex-direction: column; background: #fafafa; border-radius: 6px; border: 1px solid #eee; }
+        .day-header { text-align: center; padding: 10px 5px; background: #e0e0e0; font-weight: bold; border-radius: 6px 6px 0 0; font-size: 14px; }
+        .day-header.today { background: #ffebee; color: #d32f2f; border-bottom: 2px solid #d32f2f; }
+        .day-dropzone { flex: 1; padding: 5px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
+        .day-dropzone.dragover { background: #e3f2fd; }
+
+        .task-card { background: white; border: 1px solid #ccc; border-left: 5px solid #ccc; padding: 8px; border-radius: 4px; cursor: grab; font-size: 14px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); user-select: none; }
+        .task-card.dragging { opacity: 0.5; }
+        .task-card[data-q="q1"] { border-left-color: var(--q1); }
+        .task-card[data-q="q2"] { border-left-color: var(--q2); }
+        .task-card[data-q="q3"] { border-left-color: var(--q3); }
+        .task-card[data-q="q4"] { border-left-color: var(--q4); }
+        .task-card.is-completed { border-left-color: var(--completed); background: #e8f5e9; color: #2e7d32; text-decoration: line-through; cursor: default; }
+        
+        .task-actions { margin-top: 5px; display: flex; gap: 5px; justify-content: flex-end; }
+        .icon-btn { background: none; border: none; cursor: pointer; padding: 2px; font-size: 12px; opacity: 0.6; }
+        .icon-btn:hover { opacity: 1; transform: scale(1.1); }
+
+        .calendar-task { background: white; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 13px; cursor: pointer; border-left: 4px solid #666; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: 0.3s; }
+        .calendar-task.is-completed { background: var(--completed); color: white; border-color: #388e3c; border-left-color: #1b5e20; }
+        .calendar-task.is-completed .note-title { color: #e0f2f1; }
+        .note-title { display: block; font-size: 11px; color: #666; margin-top: 4px; font-style: italic; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; }
+        .modal-content input, .modal-content textarea, .modal-content select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .modal-content textarea { resize: vertical; min-height: 100px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+
+        /* 手機版適配：迫使四象限喺手機都可以獨立 Scroll */
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; overflow-y: auto; }
+            .sidebar { overflow-y: visible; height: auto; flex: none; }
+            .quadrant-grid { display: flex; flex-direction: column; height: auto; }
+            .list-section { min-height: 250px; } /* 手機上固定高度等佢可以 scroll */
+            .calendar-view { min-height: 60vh; }
+            body { overflow-y: auto; }
+        }
+    </style>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<header>
+    <div class="controls">
+        <button onclick="changeWeek(-1)">◀ 上週</button>
+        <span id="currentWeekLabel" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+        <button onclick="changeWeek(1)">下週 ▶</button>
+        <button onclick="goToToday()">回到今日</button>
+        <span id="syncStatus" class="cloud-status">☁️ 連線中...</span>
+    </div>
+    <div class="search-bar">
+        <select id="searchTarget">
+            <option value="both">標題 + 內文</option>
+            <option value="title">只找標題</option>
+            <option value="content">只找內文</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="搜尋任務..." onkeyup="renderAll()">
+        
+        <input type="file" id="jsonUpload" accept=".json" style="display:none;" onchange="importFromJSON(event)">
+        <button class="btn-warning" onclick="document.getElementById('jsonUpload').click()" title="從電腦上傳 JSON 覆蓋資料">📂 載入</button>
+        
+        <button class="btn-warning" onclick="backupToJSON()" title="下載目前資料備份到電腦">💾 備份</button>
+        <button class="btn-primary" onclick="openTaskModal()">➕ 新增任務</button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="sidebar">
+        <div class="quadrant-grid">
+            <div class="list-section" id="q1-list">
+                <h3>🚨 重要且緊急 (Q1)</h3>
+                <div class="task-dropzone" data-category="q1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+            </div>
+            <div class="list-section" id="q2-list">
+                <h3>⭐ 重要不緊急 (Q2)</h3>
+                <div class="task-dropzone" data-category="q2" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+            </div>
+            <div class="list-section" id="q3-list">
+                <h3>🔥 緊急不重要 (Q3)</h3>
+                <div class="task-dropzone" data-category="q3" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+            </div>
+            <div class="list-section" id="q4-list">
+                <h3>☕ 不重要不緊急 (Q4)</h3>
+                <div class="task-dropzone" data-category="q4" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+            </div>
+        </div>
+        
+        <div class="list-section completed-section" id="completed-list">
+            <h3 onclick="toggleCompletedZone()" style="cursor: pointer;" title="點擊展開/收起">
+                <span>✅ 完成清單</span>
+                <span id="completedToggleIcon">▼</span>
+            </h3>
+            <div class="task-dropzone" id="completed-zone" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <div class="calendar-view" id="calendar-container"></div>
+</div>
+
+<div class="modal" id="taskModal">
+    <div class="modal-content">
+        <h3 id="taskModalTitle" style="margin-top:0;">新增任務</h3>
+        <input type="hidden" id="editTaskId">
+        <label>分類：</label>
+        <select id="taskCategory">
+            <option value="q1">重要且緊急 (Q1)</option>
+            <option value="q2">重要不緊急 (Q2)</option>
+            <option value="q3">緊急不重要 (Q3)</option>
+            <option value="q4">不重要不緊急 (Q4)</option>
+        </select>
+        <label>標題 (最多100字)：</label>
+        <input type="text" id="taskTitle" maxlength="100" placeholder="輸入標題...">
+        <label>內文 (不限字數)：</label>
+        <textarea id="taskContent" placeholder="輸入詳細內容..."></textarea>
+        <div class="modal-actions">
+            <button onclick="closeModal('taskModal')">取消</button>
+            <button class="btn-primary" onclick="saveTask()">儲存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="noteModal">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">日曆任務備註</h3>
+        <input type="hidden" id="editCalTaskId">
+        <div style="background:#f9f9f9; padding:10px; border-radius:4px; font-size:13px; margin-bottom:10px;">
+            <strong id="noteOriginTitle"></strong><br>
+            <span id="noteOriginContent" style="color:#666; white-space: pre-wrap;"></span>
+        </div>
+        <label>備註標題 (最多50字)：</label>
+        <input type="text" id="noteTitle" maxlength="50" placeholder="輸入備註標題...">
+        <label>備註內文 (不限字數)：</label>
+        <textarea id="noteContent" placeholder="輸入備註詳細內容..."></textarea>
+        <div class="modal-actions">
+            <button onclick="deleteCalendarTask()" style="background:#ffebee; color:#d32f2f; margin-right:auto;">🗑️ 從日曆移除</button>
+            <button onclick="closeModal('noteModal')">取消</button>
+            <button class="btn-primary" onclick="saveNote()">儲存備註</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 👇 請將下面呢段換成你 Firebase 嘅 config 👇
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+    // 👆 替換完畢 👆
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let state = { tasks: [], calendarTasks: [] };
+    let currentWeekStart = new Date();
+    currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); 
+
+    db.ref('todoState').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            state.tasks = data.tasks || [];
+            state.calendarTasks = data.calendarTasks || [];
+        }
+        
+        const statusEl = document.getElementById('syncStatus');
+        statusEl.innerText = "✅ 雲端已同步";
+        statusEl.classList.add('status-sync');
+        
+        renderAll();
+    });
+
+    function saveData() {
+        document.getElementById('syncStatus').innerText = "☁️ 儲存中...";
+        document.getElementById('syncStatus').classList.remove('status-sync');
+        db.ref('todoState').set(state);
+    }
+
+    // 🌟 匯出 JSON 功能
+    function backupToJSON() {
+        const dataStr = JSON.stringify(state, null, 4);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const todayStr = new Date().toISOString().split('T')[0];
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ToDoList_Backup_${todayStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // 🌟 匯入/載入 JSON 功能
+    function importFromJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const uploadedData = JSON.parse(e.target.result);
+                // 簡單驗證檔案格式
+                if (uploadedData && typeof uploadedData === 'object' && Array.isArray(uploadedData.tasks)) {
+                    if (confirm("⚠️ 嚴重警告：載入備份會【完全覆蓋】目前雲端所有資料！確定繼續？")) {
+                        state.tasks = uploadedData.tasks || [];
+                        state.calendarTasks = uploadedData.calendarTasks || [];
+                        saveData(); // 直接將新資料 Push 上 Firebase
+                        alert("✅ 成功回復資料！");
+                    }
+                } else {
+                    alert("❌ 檔案格式錯誤，請確保係之前備份嘅 To-Do List JSON 檔案！");
+                }
+            } catch (err) {
+                alert("❌ 解析檔案失敗，請檢查檔案是否損壞！");
+            }
+            event.target.value = ''; // Reset input，確保下次揀同一檔案都會觸發
+        };
+        reader.readAsText(file);
+    }
+
+    // 🌟 摺疊/展開 完成清單功能
+    function toggleCompletedZone() {
+        const zone = document.getElementById('completed-zone');
+        const icon = document.getElementById('completedToggleIcon');
+        
+        if (zone.style.display === 'none') {
+            zone.style.display = 'flex';
+            icon.innerText = '▲';
+        } else {
+            zone.style.display = 'none';
+            icon.innerText = '▼';
+        }
+    }
+
+    function renderAll() {
+        renderCalendar();
+        renderSidebarTasks();
+    }
+
+    function changeWeek(offset) {
+        currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
+        renderAll();
+    }
+
+    function goToToday() {
+        currentWeekStart = new Date();
+        currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
+        renderAll();
+    }
+
+    function formatDate(date) {
+        let y = date.getFullYear();
+        let m = String(date.getMonth() + 1).padStart(2, '0');
+        let d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function renderCalendar() {
+        const container = document.getElementById('calendar-container');
+        container.innerHTML = '';
+        const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        
+        let weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        document.getElementById('currentWeekLabel').innerText = `${formatDate(currentWeekStart)} 至 ${formatDate(weekEnd)}`;
+
+        const today = new Date();
+        const todayStr = formatDate(today);
+
+        for (let i = 0; i < 7; i++) {
+            let colDate = new Date(currentWeekStart);
+            colDate.setDate(colDate.getDate() + i);
+            let dateStr = formatDate(colDate);
+            
+            let col = document.createElement('div');
+            col.className = 'day-column';
+            col.innerHTML = `
+                <div class="day-header ${dateStr === todayStr ? 'today' : ''}">
+                    ${days[i]}<br><small>${colDate.getMonth()+1}/${colDate.getDate()}</small>
+                </div>
+                <div class="day-dropzone" data-date="${dateStr}" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+            `;
+            
+            let dayZone = col.querySelector('.day-dropzone');
+            let tasksForDay = state.calendarTasks.filter(ct => ct.date === dateStr);
+            
+            tasksForDay.forEach(ct => {
+                let originalTask = state.tasks.find(t => t.id === ct.taskId);
+                if(!originalTask) return; 
+
+                let taskEl = document.createElement('div');
+                taskEl.className = `calendar-task ${originalTask.status === 'completed' ? 'is-completed' : ''}`;
+                taskEl.id = ct.id;
+                taskEl.draggable = true;
+                taskEl.ondragstart = drag;
+                taskEl.ondblclick = () => openNoteModal(ct.id);
+
+                let contentHtml = `<strong>${originalTask.title}</strong>`;
+                if(ct.noteTitle) contentHtml += `<span class="note-title">${ct.noteTitle}</span>`;
+                taskEl.innerHTML = contentHtml;
+                dayZone.appendChild(taskEl);
+            });
+            container.appendChild(col);
+        }
+    }
+
+    function renderSidebarTasks() {
+        ['q1', 'q2', 'q3', 'q4'].forEach(q => document.querySelector(`.task-dropzone[data-category="${q}"]`).innerHTML = '');
+        document.getElementById('completed-zone').innerHTML = '';
+
+        const keyword = document.getElementById('searchInput').value.toLowerCase();
+        const target = document.getElementById('searchTarget').value;
+
+        state.tasks.forEach(task => {
+            let matchTitle = task.title.toLowerCase().includes(keyword);
+            let matchContent = (task.content || "").toLowerCase().includes(keyword);
+            let isMatch = true;
+            if (keyword) {
+                if (target === 'title') isMatch = matchTitle;
+                else if (target === 'content') isMatch = matchContent;
+                else isMatch = matchTitle || matchContent;
+            }
+            if (!isMatch) return;
+
+            let card = document.createElement('div');
+            card.className = 'task-card';
+            card.id = task.id;
+            card.dataset.q = task.category;
+            
+            if (task.status === 'completed') {
+                card.classList.add('is-completed');
+                card.innerHTML = `
+                    <div style="margin-bottom:5px;">${task.title}</div>
+                    <div style="font-size:11px; color:#666;">完成於: ${task.completedAt}</div>
+                    <div class="task-actions">
+                        <button class="icon-btn" title="還原" onclick="toggleComplete('${task.id}')">🔄</button>
+                        <button class="icon-btn" title="徹底刪除" onclick="deleteTask('${task.id}')">🗑️</button>
+                    </div>
+                `;
+                document.getElementById('completed-zone').appendChild(card);
+            } else {
+                card.draggable = true;
+                card.ondragstart = drag;
+                card.ondblclick = () => openTaskModal(task.id); 
+                card.innerHTML = `
+                    <div>${task.title}</div>
+                    <div class="task-actions">
+                        <button class="icon-btn" title="完成" onclick="toggleComplete('${task.id}')">✅</button>
+                        <button class="icon-btn" title="刪除" onclick="deleteTask('${task.id}')">🗑️</button>
+                    </div>
+                `;
+                document.querySelector(`.task-dropzone[data-category="${task.category}"]`).appendChild(card);
+            }
+        });
+    }
+
+    function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+
+    function openTaskModal(taskId = null) {
+        const modal = document.getElementById('taskModal');
+        if (taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            document.getElementById('taskModalTitle').innerText = '編輯任務';
+            document.getElementById('editTaskId').value = task.id;
+            document.getElementById('taskTitle').value = task.title;
+            document.getElementById('taskContent').value = task.content;
+            document.getElementById('taskCategory').value = task.category;
+        } else {
+            document.getElementById('taskModalTitle').innerText = '新增任務';
+            document.getElementById('editTaskId').value = '';
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskContent').value = '';
+            document.getElementById('taskCategory').value = 'q1';
+        }
+        modal.style.display = 'flex';
+    }
+
+    function saveTask() {
+        const id = document.getElementById('editTaskId').value;
+        const title = document.getElementById('taskTitle').value.trim();
+        const content = document.getElementById('taskContent').value.trim();
+        const category = document.getElementById('taskCategory').value;
+
+        if (!title) { alert('標題不能為空！'); return; }
+
+        if (id) {
+            let task = state.tasks.find(t => t.id === id);
+            task.title = title; task.content = content; task.category = category;
+        } else {
+            state.tasks.push({ id: 't_' + generateId(), title, content, category, status: 'active' });
+        }
+        closeModal('taskModal');
+        saveData();
+    }
+
+    function toggleComplete(taskId) {
+        let task = state.tasks.find(t => t.id === taskId);
+        if (task.status === 'active') {
+            task.status = 'completed';
+            let now = new Date();
+            task.completedAt = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        } else {
+            task.status = 'active'; task.completedAt = null;
+        }
+        saveData();
+    }
+
+    function deleteTask(taskId) {
+        if(confirm("確定要徹底刪除此任務嗎？日曆上相關嘅排程亦會被移除。")) {
+            state.tasks = state.tasks.filter(t => t.id !== taskId);
+            state.calendarTasks = state.calendarTasks.filter(ct => ct.taskId !== taskId);
+            saveData();
+        }
+    }
+
+    function openNoteModal(calTaskId) {
+        const modal = document.getElementById('noteModal');
+        const ct = state.calendarTasks.find(c => c.id === calTaskId);
+        const originalTask = state.tasks.find(t => t.id === ct.taskId);
+
+        document.getElementById('editCalTaskId').value = ct.id;
+        document.getElementById('noteOriginTitle').innerText = originalTask.title;
+        document.getElementById('noteOriginContent').innerText = originalTask.content || '無內文';
+        document.getElementById('noteTitle').value = ct.noteTitle || '';
+        document.getElementById('noteContent').value = ct.noteContent || '';
+        modal.style.display = 'flex';
+    }
+
+    function saveNote() {
+        const id = document.getElementById('editCalTaskId').value;
+        let ct = state.calendarTasks.find(c => c.id === id);
+        if(ct) {
+            ct.noteTitle = document.getElementById('noteTitle').value.trim();
+            ct.noteContent = document.getElementById('noteContent').value.trim();
+        }
+        closeModal('noteModal');
+        saveData();
+    }
+
+    function deleteCalendarTask() {
+        const id = document.getElementById('editCalTaskId').value;
+        state.calendarTasks = state.calendarTasks.filter(c => c.id !== id);
+        closeModal('noteModal');
+        saveData();
+    }
+
+    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+
+    function drag(ev) {
+        ev.dataTransfer.setData("text", ev.target.id);
+        setTimeout(() => ev.target.classList.add('dragging'), 0);
+    }
+    function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('dragover'); }
+    function leaveDrop(ev) { ev.currentTarget.classList.remove('dragover'); }
+
+    function drop(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.remove('dragover');
+        
+        const draggedId = ev.dataTransfer.getData("text");
+        const targetZone = ev.currentTarget;
+        const isFromSidebar = draggedId.startsWith('t_');
+        const isFromCalendar = draggedId.startsWith('c_');
+
+        if (targetZone.classList.contains('day-dropzone')) {
+            const targetDate = targetZone.dataset.date;
+            if (isFromSidebar) {
+                let originalTask = state.tasks.find(t => t.id === draggedId);
+                if(originalTask.status === 'completed') { alert("已完成嘅任務不能再排程。"); return; }
+                state.calendarTasks.push({
+                    id: 'c_' + generateId(), taskId: draggedId, date: targetDate, noteTitle: '', noteContent: ''
+                });
+            } else if (isFromCalendar) {
+                let ct = state.calendarTasks.find(c => c.id === draggedId);
+                if(ct) ct.date = targetDate;
+            }
+        } 
+        else if (targetZone.classList.contains('task-dropzone') && targetZone.dataset.category) {
+            const newCategory = targetZone.dataset.category;
+            if (isFromSidebar) {
+                let task = state.tasks.find(t => t.id === draggedId);
+                if(task && task.status !== 'completed') task.category = newCategory;
+            } else if (isFromCalendar) {
+                state.calendarTasks = state.calendarTasks.filter(c => c.id !== draggedId);
+            }
+        }
+        saveData(); 
+    }
+
+    document.addEventListener('dragend', (ev) => {
+        if(ev.target.classList) ev.target.classList.remove('dragging');
+        document.querySelectorAll('.dragover').forEach(el => el.classList.remove('dragover'));
+    });
+</script>
+</body>
+</html>
