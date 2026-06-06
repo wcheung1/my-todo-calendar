@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>四象限任務日曆系統 (Firebase 雲端同步版)</title>
+    <title>四象限任務日曆系統 (安全登入版)</title>
     <style>
         :root {
             --q1: #ff4d4d; --q2: #ffcc00; --q3: #2196F3; --q4: #9e9e9e;
@@ -11,7 +11,17 @@
         }
 
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { margin: 0; padding: 10px; background: var(--bg); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { margin: 0; padding: 0; background: var(--bg); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* 🌟 登入畫面樣式 */
+        #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; color: white; position: fixed; top: 0; left: 0; width: 100%; z-index: 2000; }
+        #login-screen h1 { margin-bottom: 20px; }
+        .btn-google { background: white; color: #757575; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background 0.3s; }
+        .btn-google:hover { background: #f1f1f1; }
+        .btn-google img { width: 24px; height: 24px; }
+
+        /* 🌟 主程式畫面 (預設隱藏) */
+        #app-container { display: none; flex-direction: column; height: 100vh; padding: 10px; }
 
         header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 10px; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
         .controls, .search-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -22,13 +32,14 @@
         .btn-primary:hover { background: #1a252f; }
         .btn-warning { background: #e67e22; color: white; border: none; }
         .btn-warning:hover { background: #d35400; }
+        .btn-logout { background: #c0392b; color: white; border: none; }
+        .btn-logout:hover { background: #a93226; }
         
         .cloud-status { font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
         .status-sync { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
 
-        .main-container { display: flex; gap: 15px; flex: 1; min-height: 0; overflow: hidden; flex-direction: row; }
+        .main-content { display: flex; gap: 15px; flex: 1; min-height: 0; overflow: hidden; flex-direction: row; }
         
-        /* 🌟 側邊欄與四象限捲動設定 */
         .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 320px; overflow: hidden; padding-right: 5px; }
         .quadrant-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
         .list-section { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
@@ -39,14 +50,12 @@
         #q3-list h3 { border-color: var(--q3); color: var(--q3); }
         #q4-list h3 { border-color: var(--q4); color: #666; }
         
-        /* 🌟 完成清單特定樣式 (摺疊) */
         .completed-section { flex-shrink: 0; transition: max-height 0.3s ease; }
         #completed-list h3 { border-color: var(--completed); color: var(--completed); margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; user-select: none; }
 
-        /* 🌟 所有 Dropzone 加入獨立 Scroll */
         .task-dropzone { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 5px; border: 2px dashed transparent; border-radius: 4px; overflow-y: auto; min-height: 0; }
         .task-dropzone.dragover { background: #f0f8ff; border-color: #2196F3; }
-        #completed-zone { margin-top: 10px; max-height: 300px; } /* 展開時最高限制 */
+        #completed-zone { margin-top: 10px; max-height: 300px; } 
 
         .calendar-view { flex: 2; display: flex; gap: 5px; overflow-x: auto; background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .day-column { flex: 1; min-width: 120px; display: flex; flex-direction: column; background: #fafafa; border-radius: 6px; border: 1px solid #eee; }
@@ -78,77 +87,91 @@
         .modal-content textarea { resize: vertical; min-height: 100px; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
-        /* 手機版適配：迫使四象限喺手機都可以獨立 Scroll */
         @media (max-width: 768px) {
-            .main-container { flex-direction: column; overflow-y: auto; }
+            .main-content { flex-direction: column; overflow-y: auto; }
             .sidebar { overflow-y: visible; height: auto; flex: none; }
             .quadrant-grid { display: flex; flex-direction: column; height: auto; }
-            .list-section { min-height: 250px; } /* 手機上固定高度等佢可以 scroll */
+            .list-section { min-height: 250px; } 
             .calendar-view { min-height: 60vh; }
-            body { overflow-y: auto; }
+            #app-container { overflow-y: auto; }
         }
     </style>
     
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 </head>
 <body>
 
-<header>
-    <div class="controls">
-        <button onclick="changeWeek(-1)">◀ 上週</button>
-        <span id="currentWeekLabel" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
-        <button onclick="changeWeek(1)">下週 ▶</button>
-        <button onclick="goToToday()">回到今日</button>
-        <span id="syncStatus" class="cloud-status">☁️ 連線中...</span>
-    </div>
-    <div class="search-bar">
-        <select id="searchTarget">
-            <option value="both">標題 + 內文</option>
-            <option value="title">只找標題</option>
-            <option value="content">只找內文</option>
-        </select>
-        <input type="text" id="searchInput" placeholder="搜尋任務..." onkeyup="renderAll()">
-        
-        <input type="file" id="jsonUpload" accept=".json" style="display:none;" onchange="importFromJSON(event)">
-        <button class="btn-warning" onclick="document.getElementById('jsonUpload').click()" title="從電腦上傳 JSON 覆蓋資料">📂 載入</button>
-        
-        <button class="btn-warning" onclick="backupToJSON()" title="下載目前資料備份到電腦">💾 備份</button>
-        <button class="btn-primary" onclick="openTaskModal()">➕ 新增任務</button>
-    </div>
-</header>
+<div id="login-screen">
+    <h1>🗓️ 專屬任務日曆系統</h1>
+    <p style="margin-bottom: 30px; text-align: center;">請登入以存取你嘅個人資料<br><small>(每人獨立存儲，互不干擾)</small></p>
+    <button class="btn-google" onclick="loginWithGoogle()">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo">
+        用 Google 帳戶登入
+    </button>
+</div>
 
-<div class="main-container">
-    <div class="sidebar">
-        <div class="quadrant-grid">
-            <div class="list-section" id="q1-list">
-                <h3>🚨 重要且緊急 (Q1)</h3>
-                <div class="task-dropzone" data-category="q1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+<div id="app-container">
+    <header>
+        <div class="controls">
+            <button onclick="changeWeek(-1)">◀ 上週</button>
+            <span id="currentWeekLabel" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+            <button onclick="changeWeek(1)">下週 ▶</button>
+            <button onclick="goToToday()">回到今日</button>
+            <span id="syncStatus" class="cloud-status">☁️ 連線中...</span>
+        </div>
+        <div class="search-bar">
+            <span id="userNameDisplay" style="font-size: 13px; color: #666; font-weight: bold;"></span>
+            
+            <select id="searchTarget">
+                <option value="both">標題+內文</option>
+                <option value="title">只找標題</option>
+                <option value="content">只找內文</option>
+            </select>
+            <input type="text" id="searchInput" placeholder="搜尋任務..." onkeyup="renderAll()">
+            
+            <input type="file" id="jsonUpload" accept=".json" style="display:none;" onchange="importFromJSON(event)">
+            <button class="btn-warning" onclick="document.getElementById('jsonUpload').click()" title="載入 JSON 覆蓋資料">📂 載入</button>
+            <button class="btn-warning" onclick="backupToJSON()" title="備份 JSON">💾 備份</button>
+            
+            <button class="btn-primary" onclick="openTaskModal()">➕ 新增任務</button>
+            <button class="btn-logout" onclick="logout()">登出</button>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <div class="quadrant-grid">
+                <div class="list-section" id="q1-list">
+                    <h3>🚨 重要且緊急 (Q1)</h3>
+                    <div class="task-dropzone" data-category="q1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+                </div>
+                <div class="list-section" id="q2-list">
+                    <h3>⭐ 重要不緊急 (Q2)</h3>
+                    <div class="task-dropzone" data-category="q2" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+                </div>
+                <div class="list-section" id="q3-list">
+                    <h3>🔥 緊急不重要 (Q3)</h3>
+                    <div class="task-dropzone" data-category="q3" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+                </div>
+                <div class="list-section" id="q4-list">
+                    <h3>☕ 不重要不緊急 (Q4)</h3>
+                    <div class="task-dropzone" data-category="q4" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+                </div>
             </div>
-            <div class="list-section" id="q2-list">
-                <h3>⭐ 重要不緊急 (Q2)</h3>
-                <div class="task-dropzone" data-category="q2" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
-            </div>
-            <div class="list-section" id="q3-list">
-                <h3>🔥 緊急不重要 (Q3)</h3>
-                <div class="task-dropzone" data-category="q3" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
-            </div>
-            <div class="list-section" id="q4-list">
-                <h3>☕ 不重要不緊急 (Q4)</h3>
-                <div class="task-dropzone" data-category="q4" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
+            
+            <div class="list-section completed-section" id="completed-list">
+                <h3 onclick="toggleCompletedZone()" style="cursor: pointer;" title="點擊展開/收起">
+                    <span>✅ 完成清單</span>
+                    <span id="completedToggleIcon">▼</span>
+                </h3>
+                <div class="task-dropzone" id="completed-zone" style="display: none;"></div>
             </div>
         </div>
         
-        <div class="list-section completed-section" id="completed-list">
-            <h3 onclick="toggleCompletedZone()" style="cursor: pointer;" title="點擊展開/收起">
-                <span>✅ 完成清單</span>
-                <span id="completedToggleIcon">▼</span>
-            </h3>
-            <div class="task-dropzone" id="completed-zone" style="display: none;"></div>
-        </div>
+        <div class="calendar-view" id="calendar-container"></div>
     </div>
-    
-    <div class="calendar-view" id="calendar-container"></div>
 </div>
 
 <div class="modal" id="taskModal">
@@ -208,29 +231,67 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
 
+    let currentUserUid = null;
     let state = { tasks: [], calendarTasks: [] };
     let currentWeekStart = new Date();
     currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); 
 
-    db.ref('todoState').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            state.tasks = data.tasks || [];
-            state.calendarTasks = data.calendarTasks || [];
+    // 🌟 登入及權限管理系統
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            // 已登入：顯示主畫面，設定 UID，開始載入該使用者專屬資料
+            currentUserUid = user.uid;
+            document.getElementById('userNameDisplay').innerText = `👤 ${user.displayName || user.email}`;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+            
+            // 監聽專屬資料夾 (users/UID/todoState)
+            db.ref(`users/${currentUserUid}/todoState`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    state.tasks = data.tasks || [];
+                    state.calendarTasks = data.calendarTasks || [];
+                } else {
+                    state = { tasks: [], calendarTasks: [] }; // 新帳戶清空
+                }
+                
+                const statusEl = document.getElementById('syncStatus');
+                statusEl.innerText = "✅ 雲端已同步";
+                statusEl.classList.add('status-sync');
+                
+                renderAll();
+            });
+        } else {
+            // 未登入：顯示登入畫面，隱藏主畫面，並清空舊有監聽器
+            if (currentUserUid) {
+                db.ref(`users/${currentUserUid}/todoState`).off(); // 關閉舊監聽
+            }
+            currentUserUid = null;
+            state = { tasks: [], calendarTasks: [] }; // 清空本地數據
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('app-container').style.display = 'none';
         }
-        
-        const statusEl = document.getElementById('syncStatus');
-        statusEl.innerText = "✅ 雲端已同步";
-        statusEl.classList.add('status-sync');
-        
-        renderAll();
     });
 
+    function loginWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch((error) => {
+            alert("登入失敗：" + error.message);
+        });
+    }
+
+    function logout() {
+        auth.signOut();
+    }
+
+    // 🌟 儲存數據 (寫入專屬資料夾)
     function saveData() {
+        if (!currentUserUid) return;
         document.getElementById('syncStatus').innerText = "☁️ 儲存中...";
         document.getElementById('syncStatus').classList.remove('status-sync');
-        db.ref('todoState').set(state);
+        db.ref(`users/${currentUserUid}/todoState`).set(state);
     }
 
     // 🌟 匯出 JSON 功能
@@ -257,12 +318,11 @@
         reader.onload = function(e) {
             try {
                 const uploadedData = JSON.parse(e.target.result);
-                // 簡單驗證檔案格式
                 if (uploadedData && typeof uploadedData === 'object' && Array.isArray(uploadedData.tasks)) {
-                    if (confirm("⚠️ 嚴重警告：載入備份會【完全覆蓋】目前雲端所有資料！確定繼續？")) {
+                    if (confirm("⚠️ 警告：載入備份會【完全覆蓋】你目前雲端嘅所有資料！確定繼續？")) {
                         state.tasks = uploadedData.tasks || [];
                         state.calendarTasks = uploadedData.calendarTasks || [];
-                        saveData(); // 直接將新資料 Push 上 Firebase
+                        saveData(); 
                         alert("✅ 成功回復資料！");
                     }
                 } else {
@@ -271,7 +331,7 @@
             } catch (err) {
                 alert("❌ 解析檔案失敗，請檢查檔案是否損壞！");
             }
-            event.target.value = ''; // Reset input，確保下次揀同一檔案都會觸發
+            event.target.value = ''; 
         };
         reader.readAsText(file);
     }
@@ -290,10 +350,8 @@
         }
     }
 
-    function renderAll() {
-        renderCalendar();
-        renderSidebarTasks();
-    }
+    // UI 渲染及其他業務邏輯 (無需修改，保持原樣)
+    function renderAll() { renderCalendar(); renderSidebarTasks(); }
 
     function changeWeek(offset) {
         currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
