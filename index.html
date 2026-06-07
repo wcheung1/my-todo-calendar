@@ -3,29 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>四象限任務日曆系統 (安全登入版)</title>
+    <title>四象限任務日曆系統 (每月視角 + 顏色連動版)</title>
     <style>
         :root {
             --q1: #ff4d4d; --q2: #ffcc00; --q3: #2196F3; --q4: #9e9e9e;
+            --q2-text: #d4a000;
             --completed: #4caf50; --bg: #f4f7f6; --text: #333;
         }
 
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { margin: 0; padding: 0; background: var(--bg); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* 🌟 登入畫面樣式 */
         #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; color: white; position: fixed; top: 0; left: 0; width: 100%; z-index: 2000; }
         #login-screen h1 { margin-bottom: 20px; }
         .btn-google { background: white; color: #757575; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background 0.3s; }
         .btn-google:hover { background: #f1f1f1; }
         .btn-google img { width: 24px; height: 24px; }
 
-        /* 🌟 主程式畫面 (預設隱藏) */
         #app-container { display: none; flex-direction: column; height: 100vh; padding: 10px; }
 
         header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 10px; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
         .controls, .search-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        input[type="text"], select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
+        input[type="text"], select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; font-weight: bold; }
         button { padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; cursor: pointer; font-weight: bold; background: #eee; transition: 0.2s; white-space: nowrap; }
         button:hover { background: #ddd; }
         .btn-primary { background: #2c3e50; color: white; border: none; }
@@ -40,13 +39,13 @@
 
         .main-content { display: flex; gap: 15px; flex: 1; min-height: 0; overflow: hidden; flex-direction: row; }
         
-        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 320px; overflow: hidden; padding-right: 5px; }
+        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 320px; max-width: 400px; overflow: hidden; padding-right: 5px; }
         .quadrant-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
         .list-section { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
         .list-section h3 { margin: 0 0 10px 0; font-size: 14px; padding-bottom: 5px; border-bottom: 2px solid; flex-shrink: 0; }
         
         #q1-list h3 { border-color: var(--q1); color: var(--q1); }
-        #q2-list h3 { border-color: var(--q2); color: #d4a000; }
+        #q2-list h3 { border-color: var(--q2); color: var(--q2-text); }
         #q3-list h3 { border-color: var(--q3); color: var(--q3); }
         #q4-list h3 { border-color: var(--q4); color: #666; }
         
@@ -55,14 +54,22 @@
 
         .task-dropzone { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 5px; border: 2px dashed transparent; border-radius: 4px; overflow-y: auto; min-height: 0; }
         .task-dropzone.dragover { background: #f0f8ff; border-color: #2196F3; }
-        #completed-zone { margin-top: 10px; max-height: 300px; } 
+        #completed-zone { margin-top: 10px; max-height: 250px; } 
 
-        .calendar-view { flex: 2; display: flex; gap: 5px; overflow-x: auto; background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .day-column { flex: 1; min-width: 120px; display: flex; flex-direction: column; background: #fafafa; border-radius: 6px; border: 1px solid #eee; }
-        .day-header { text-align: center; padding: 10px 5px; background: #e0e0e0; font-weight: bold; border-radius: 6px 6px 0 0; font-size: 14px; }
-        .day-header.today { background: #ffebee; color: #d32f2f; border-bottom: 2px solid #d32f2f; }
-        .day-dropzone { flex: 1; padding: 5px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
-        .day-dropzone.dragover { background: #e3f2fd; }
+        .calendar-view { flex: 2; display: flex; flex-direction: column; overflow-x: auto; background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .calendar-inner { display: flex; flex-direction: column; flex: 1; min-width: 700px; }
+        .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 5px; flex-shrink: 0; }
+        .day-name { text-align: center; font-weight: bold; background: #e0e0e0; padding: 8px 5px; border-radius: 6px; font-size: 14px; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(5, 1fr); gap: 5px; flex: 1; min-height: 0; }
+        .calendar-grid.six-rows { grid-template-rows: repeat(6, 1fr); } 
+        
+        .day-cell { display: flex; flex-direction: column; background: #fafafa; border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
+        .day-cell-header { padding: 4px 8px; text-align: right; font-size: 12px; font-weight: bold; background: #f0f0f0; border-bottom: 1px solid #eee; }
+        .day-cell-header.today { background: #ffebee; color: #d32f2f; }
+        .day-cell-header.other-month { color: #ccc; background: #fdfdfd; }
+        .day-dropzone { flex: 1; padding: 4px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 40px; }
+        .day-dropzone.dragover { background: #e3f2fd; border: 1px dashed #2196F3; }
 
         .task-card { background: white; border: 1px solid #ccc; border-left: 5px solid #ccc; padding: 8px; border-radius: 4px; cursor: grab; font-size: 14px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); user-select: none; }
         .task-card.dragging { opacity: 0.5; }
@@ -76,10 +83,17 @@
         .icon-btn { background: none; border: none; cursor: pointer; padding: 2px; font-size: 12px; opacity: 0.6; }
         .icon-btn:hover { opacity: 1; transform: scale(1.1); }
 
-        .calendar-task { background: white; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 13px; cursor: pointer; border-left: 4px solid #666; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: 0.3s; }
-        .calendar-task.is-completed { background: var(--completed); color: white; border-color: #388e3c; border-left-color: #1b5e20; }
+        .calendar-task { background: white; border: 1px solid #ccc; padding: 5px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; border-left: 4px solid #ccc; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: 0.3s; word-break: break-all; }
+        
+        .calendar-task[data-q="q1"] { border-color: #ffcccc; border-left-color: var(--q1); color: var(--q1); }
+        .calendar-task[data-q="q2"] { border-color: #ffe680; border-left-color: var(--q2); color: var(--q2-text); }
+        .calendar-task[data-q="q3"] { border-color: #bbdefb; border-left-color: var(--q3); color: #1565C0; }
+        .calendar-task[data-q="q4"] { border-color: #e0e0e0; border-left-color: var(--q4); color: #616161; }
+        
+        .calendar-task.is-completed { background: var(--completed); color: white !important; border-color: #388e3c; border-left-color: #1b5e20; }
         .calendar-task.is-completed .note-title { color: #e0f2f1; }
-        .note-title { display: block; font-size: 11px; color: #666; margin-top: 4px; font-style: italic; }
+        
+        .note-title { display: block; font-size: 11px; color: #666; margin-top: 4px; font-style: italic; font-weight: normal; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; }
@@ -89,10 +103,10 @@
 
         @media (max-width: 768px) {
             .main-content { flex-direction: column; overflow-y: auto; }
-            .sidebar { overflow-y: visible; height: auto; flex: none; }
+            .sidebar { overflow-y: visible; height: auto; flex: none; max-width: none; }
             .quadrant-grid { display: flex; flex-direction: column; height: auto; }
             .list-section { min-height: 250px; } 
-            .calendar-view { min-height: 60vh; }
+            .calendar-view { min-height: 70vh; }
             #app-container { overflow-y: auto; }
         }
     </style>
@@ -115,10 +129,13 @@
 <div id="app-container">
     <header>
         <div class="controls">
-            <button onclick="changeWeek(-1)">◀ 上週</button>
-            <span id="currentWeekLabel" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
-            <button onclick="changeWeek(1)">下週 ▶</button>
-            <button onclick="goToToday()">回到今日</button>
+            <button onclick="changeMonth(-1)">◀ 上月</button>
+            <div style="display: flex; gap: 5px;">
+                <select id="yearSelect" onchange="jumpToDate()"></select>
+                <select id="monthSelect" onchange="jumpToDate()"></select>
+            </div>
+            <button onclick="changeMonth(1)">下月 ▶</button>
+            <button onclick="goToToday()">回到本月</button>
             <span id="syncStatus" class="cloud-status">☁️ 連線中...</span>
         </div>
         <div class="search-bar">
@@ -170,7 +187,20 @@
             </div>
         </div>
         
-        <div class="calendar-view" id="calendar-container"></div>
+        <div class="calendar-view">
+            <div class="calendar-inner">
+                <div class="calendar-header-days">
+                    <div class="day-name" style="color: #d32f2f;">日</div>
+                    <div class="day-name">一</div>
+                    <div class="day-name">二</div>
+                    <div class="day-name">三</div>
+                    <div class="day-name">四</div>
+                    <div class="day-name">五</div>
+                    <div class="day-name">六</div>
+                </div>
+                <div id="calendar-container" class="calendar-grid"></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -217,7 +247,6 @@
 </div>
 
 <script>
-    // 👇 請將下面呢段換成你 Firebase 嘅 config 👇
     const firebaseConfig = {
         apiKey: "AIzaSyC7bLXkZDd7rZGj4NznZX6vlRms8klF1BY",
         authDomain: "my-todo-calendar-4a31f.firebaseapp.com",
@@ -227,7 +256,6 @@
         messagingSenderId: "290640214956",
         appId: "1:290640214956:web:49c05a14cd3ea7180f5809"
     };
-    // 👆 替換完畢 👆
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -235,46 +263,73 @@
 
     let currentUserUid = null;
     let state = { tasks: [], calendarTasks: [] };
-    let currentWeekStart = new Date();
-    currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); 
+    
+    let currentMonthDisplay = new Date();
+    currentMonthDisplay.setDate(1);
 
-    // 🌟 登入及權限管理系統
+    function initSelectors() {
+        const ys = document.getElementById('yearSelect');
+        const ms = document.getElementById('monthSelect');
+        
+        const currentYear = new Date().getFullYear();
+        for(let i = currentYear - 5; i <= currentYear + 10; i++) {
+            let opt = document.createElement('option');
+            opt.value = i; opt.innerText = i + "年";
+            ys.appendChild(opt);
+        }
+        
+        for(let i = 0; i < 12; i++) {
+            let opt = document.createElement('option');
+            opt.value = i; opt.innerText = (i + 1) + "月";
+            ms.appendChild(opt);
+        }
+        updateSelects();
+    }
+
+    function updateSelects() {
+        document.getElementById('yearSelect').value = currentMonthDisplay.getFullYear();
+        document.getElementById('monthSelect').value = currentMonthDisplay.getMonth();
+    }
+
+    function jumpToDate() {
+        const y = parseInt(document.getElementById('yearSelect').value);
+        const m = parseInt(document.getElementById('monthSelect').value);
+        currentMonthDisplay = new Date(y, m, 1);
+        renderAll();
+    }
+
     auth.onAuthStateChanged((user) => {
         if (user) {
-            // 已登入：顯示主畫面，設定 UID，開始載入該使用者專屬資料
             currentUserUid = user.uid;
             document.getElementById('userNameDisplay').innerText = `👤 ${user.displayName || user.email}`;
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             
-            // 監聽專屬資料夾 (users/UID/todoState)
+            initSelectors();
+
             db.ref(`users/${currentUserUid}/todoState`).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     state.tasks = data.tasks || [];
                     state.calendarTasks = data.calendarTasks || [];
                 } else {
-                    state = { tasks: [], calendarTasks: [] }; // 新帳戶清空
+                    state = { tasks: [], calendarTasks: [] }; 
                 }
-                
                 const statusEl = document.getElementById('syncStatus');
                 statusEl.innerText = "✅ 雲端已同步";
                 statusEl.classList.add('status-sync');
-                
                 renderAll();
             });
         } else {
-            // 未登入：顯示登入畫面，隱藏主畫面，並清空舊有監聽器
-            if (currentUserUid) {
-                db.ref(`users/${currentUserUid}/todoState`).off(); // 關閉舊監聽
-            }
+            if (currentUserUid) db.ref(`users/${currentUserUid}/todoState`).off();
             currentUserUid = null;
-            state = { tasks: [], calendarTasks: [] }; // 清空本地數據
+            state = { tasks: [], calendarTasks: [] }; 
             document.getElementById('login-screen').style.display = 'flex';
             document.getElementById('app-container').style.display = 'none';
         }
     });
 
+    // 🌟 回復最單純、最原始嘅登入 Code
     function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).catch((error) => {
@@ -286,7 +341,6 @@
         auth.signOut();
     }
 
-    // 🌟 儲存數據 (寫入專屬資料夾)
     function saveData() {
         if (!currentUserUid) return;
         document.getElementById('syncStatus').innerText = "☁️ 儲存中...";
@@ -294,7 +348,6 @@
         db.ref(`users/${currentUserUid}/todoState`).set(state);
     }
 
-    // 🌟 匯出 JSON 功能
     function backupToJSON() {
         const dataStr = JSON.stringify(state, null, 4);
         const blob = new Blob([dataStr], { type: "application/json" });
@@ -309,11 +362,9 @@
         URL.revokeObjectURL(url);
     }
 
-    // 🌟 匯入/載入 JSON 功能
     function importFromJSON(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
@@ -326,41 +377,38 @@
                         alert("✅ 成功回復資料！");
                     }
                 } else {
-                    alert("❌ 檔案格式錯誤，請確保係之前備份嘅 To-Do List JSON 檔案！");
+                    alert("❌ 檔案格式錯誤！");
                 }
             } catch (err) {
-                alert("❌ 解析檔案失敗，請檢查檔案是否損壞！");
+                alert("❌ 解析檔案失敗！");
             }
             event.target.value = ''; 
         };
         reader.readAsText(file);
     }
 
-    // 🌟 摺疊/展開 完成清單功能
     function toggleCompletedZone() {
         const zone = document.getElementById('completed-zone');
         const icon = document.getElementById('completedToggleIcon');
-        
         if (zone.style.display === 'none') {
-            zone.style.display = 'flex';
-            icon.innerText = '▲';
+            zone.style.display = 'flex'; icon.innerText = '▲';
         } else {
-            zone.style.display = 'none';
-            icon.innerText = '▼';
+            zone.style.display = 'none'; icon.innerText = '▼';
         }
     }
 
-    // UI 渲染及其他業務邏輯 (無需修改，保持原樣)
     function renderAll() { renderCalendar(); renderSidebarTasks(); }
 
-    function changeWeek(offset) {
-        currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
+    function changeMonth(offset) {
+        currentMonthDisplay.setMonth(currentMonthDisplay.getMonth() + offset);
+        updateSelects();
         renderAll();
     }
 
     function goToToday() {
-        currentWeekStart = new Date();
-        currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
+        currentMonthDisplay = new Date();
+        currentMonthDisplay.setDate(1);
+        updateSelects();
         renderAll();
     }
 
@@ -374,30 +422,50 @@
     function renderCalendar() {
         const container = document.getElementById('calendar-container');
         container.innerHTML = '';
-        const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
         
-        let weekEnd = new Date(currentWeekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        document.getElementById('currentWeekLabel').innerText = `${formatDate(currentWeekStart)} 至 ${formatDate(weekEnd)}`;
+        let year = currentMonthDisplay.getFullYear();
+        let month = currentMonthDisplay.getMonth();
+        
+        let firstDay = new Date(year, month, 1).getDay(); 
+        let daysInMonth = new Date(year, month + 1, 0).getDate(); 
+        let daysInPrevMonth = new Date(year, month, 0).getDate(); 
+        
+        let totalCells = firstDay + daysInMonth;
+        let rows = Math.ceil(totalCells / 7); 
+        
+        container.className = `calendar-grid ${rows === 6 ? 'six-rows' : ''}`;
+        
+        let dateCounter = 1;
+        let nextMonthCounter = 1;
+        let todayStr = formatDate(new Date());
 
-        const today = new Date();
-        const todayStr = formatDate(today);
-
-        for (let i = 0; i < 7; i++) {
-            let colDate = new Date(currentWeekStart);
-            colDate.setDate(colDate.getDate() + i);
-            let dateStr = formatDate(colDate);
+        for (let i = 0; i < rows * 7; i++) {
+            let cellDate;
+            let isOtherMonth = false;
             
-            let col = document.createElement('div');
-            col.className = 'day-column';
-            col.innerHTML = `
-                <div class="day-header ${dateStr === todayStr ? 'today' : ''}">
-                    ${days[i]}<br><small>${colDate.getMonth()+1}/${colDate.getDate()}</small>
+            if (i < firstDay) {
+                cellDate = new Date(year, month - 1, daysInPrevMonth - firstDay + 1 + i);
+                isOtherMonth = true;
+            } else if (dateCounter <= daysInMonth) {
+                cellDate = new Date(year, month, dateCounter++);
+            } else {
+                cellDate = new Date(year, month + 1, nextMonthCounter++);
+                isOtherMonth = true;
+            }
+            
+            let dateStr = formatDate(cellDate);
+            let isToday = (dateStr === todayStr);
+            
+            let cell = document.createElement('div');
+            cell.className = 'day-cell';
+            cell.innerHTML = `
+                <div class="day-cell-header ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''}">
+                    ${cellDate.getMonth()+1}/${cellDate.getDate()}
                 </div>
                 <div class="day-dropzone" data-date="${dateStr}" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
             `;
             
-            let dayZone = col.querySelector('.day-dropzone');
+            let dayZone = cell.querySelector('.day-dropzone');
             let tasksForDay = state.calendarTasks.filter(ct => ct.date === dateStr);
             
             tasksForDay.forEach(ct => {
@@ -407,16 +475,17 @@
                 let taskEl = document.createElement('div');
                 taskEl.className = `calendar-task ${originalTask.status === 'completed' ? 'is-completed' : ''}`;
                 taskEl.id = ct.id;
+                taskEl.dataset.q = originalTask.category;
                 taskEl.draggable = true;
                 taskEl.ondragstart = drag;
                 taskEl.ondblclick = () => openNoteModal(ct.id);
 
-                let contentHtml = `<strong>${originalTask.title}</strong>`;
+                let contentHtml = `<span>${originalTask.title}</span>`;
                 if(ct.noteTitle) contentHtml += `<span class="note-title">${ct.noteTitle}</span>`;
                 taskEl.innerHTML = contentHtml;
                 dayZone.appendChild(taskEl);
             });
-            container.appendChild(col);
+            container.appendChild(cell);
         }
     }
 
