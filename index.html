@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>四象限任務日曆系統 (每月視角 + 顏色連動版)</title>
+    <title>四象限任務日曆系統 (安全登入版)</title>
     <style>
         :root {
             --q1: #ff4d4d; --q2: #ffcc00; --q3: #2196F3; --q4: #9e9e9e;
-            --q2-text: #d4a000; /* 特別為 Q2 黃色設定較深嘅文字色，以防喺白底睇唔清 */
             --completed: #4caf50; --bg: #f4f7f6; --text: #333;
         }
 
@@ -21,12 +20,12 @@
         .btn-google:hover { background: #f1f1f1; }
         .btn-google img { width: 24px; height: 24px; }
 
-        /* 🌟 主程式畫面 */
+        /* 🌟 主程式畫面 (預設隱藏) */
         #app-container { display: none; flex-direction: column; height: 100vh; padding: 10px; }
 
         header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 10px; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
         .controls, .search-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        input[type="text"], select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; font-weight: bold; }
+        input[type="text"], select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
         button { padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; cursor: pointer; font-weight: bold; background: #eee; transition: 0.2s; white-space: nowrap; }
         button:hover { background: #ddd; }
         .btn-primary { background: #2c3e50; color: white; border: none; }
@@ -41,13 +40,13 @@
 
         .main-content { display: flex; gap: 15px; flex: 1; min-height: 0; overflow: hidden; flex-direction: row; }
         
-        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 320px; max-width: 400px; overflow: hidden; padding-right: 5px; }
+        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 320px; overflow: hidden; padding-right: 5px; }
         .quadrant-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
         .list-section { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
         .list-section h3 { margin: 0 0 10px 0; font-size: 14px; padding-bottom: 5px; border-bottom: 2px solid; flex-shrink: 0; }
         
         #q1-list h3 { border-color: var(--q1); color: var(--q1); }
-        #q2-list h3 { border-color: var(--q2); color: var(--q2-text); }
+        #q2-list h3 { border-color: var(--q2); color: #d4a000; }
         #q3-list h3 { border-color: var(--q3); color: var(--q3); }
         #q4-list h3 { border-color: var(--q4); color: #666; }
         
@@ -56,25 +55,15 @@
 
         .task-dropzone { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 5px; border: 2px dashed transparent; border-radius: 4px; overflow-y: auto; min-height: 0; }
         .task-dropzone.dragover { background: #f0f8ff; border-color: #2196F3; }
-        #completed-zone { margin-top: 10px; max-height: 250px; } 
+        #completed-zone { margin-top: 10px; max-height: 300px; } 
 
-        /* 🌟 每月日曆視角全新佈局 */
-        .calendar-view { flex: 2; display: flex; flex-direction: column; overflow-x: auto; background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .calendar-inner { display: flex; flex-direction: column; flex: 1; min-width: 700px; /* 防止手機螢幕壓得太扁 */ }
-        .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 5px; flex-shrink: 0; }
-        .day-name { text-align: center; font-weight: bold; background: #e0e0e0; padding: 8px 5px; border-radius: 6px; font-size: 14px; }
-        
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(5, 1fr); gap: 5px; flex: 1; min-height: 0; }
-        .calendar-grid.six-rows { grid-template-rows: repeat(6, 1fr); } /* 處理某啲月份有 6 個星期嘅情況 */
-        
-        .day-cell { display: flex; flex-direction: column; background: #fafafa; border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
-        .day-cell-header { padding: 4px 8px; text-align: right; font-size: 12px; font-weight: bold; background: #f0f0f0; border-bottom: 1px solid #eee; }
-        .day-cell-header.today { background: #ffebee; color: #d32f2f; }
-        .day-cell-header.other-month { color: #ccc; background: #fdfdfd; }
-        .day-dropzone { flex: 1; padding: 4px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 40px; }
-        .day-dropzone.dragover { background: #e3f2fd; border: 1px dashed #2196F3; }
+        .calendar-view { flex: 2; display: flex; gap: 5px; overflow-x: auto; background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .day-column { flex: 1; min-width: 120px; display: flex; flex-direction: column; background: #fafafa; border-radius: 6px; border: 1px solid #eee; }
+        .day-header { text-align: center; padding: 10px 5px; background: #e0e0e0; font-weight: bold; border-radius: 6px 6px 0 0; font-size: 14px; }
+        .day-header.today { background: #ffebee; color: #d32f2f; border-bottom: 2px solid #d32f2f; }
+        .day-dropzone { flex: 1; padding: 5px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
+        .day-dropzone.dragover { background: #e3f2fd; }
 
-        /* 🌟 任務卡片樣式 */
         .task-card { background: white; border: 1px solid #ccc; border-left: 5px solid #ccc; padding: 8px; border-radius: 4px; cursor: grab; font-size: 14px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); user-select: none; }
         .task-card.dragging { opacity: 0.5; }
         .task-card[data-q="q1"] { border-left-color: var(--q1); }
@@ -87,19 +76,10 @@
         .icon-btn { background: none; border: none; cursor: pointer; padding: 2px; font-size: 12px; opacity: 0.6; }
         .icon-btn:hover { opacity: 1; transform: scale(1.1); }
 
-        /* 🌟 日曆內任務樣式 (連動四象限顏色) */
-        .calendar-task { background: white; border: 1px solid #ccc; padding: 5px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; border-left: 4px solid #ccc; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: 0.3s; word-break: break-all; }
-        
-        /* 根據類別轉色 */
-        .calendar-task[data-q="q1"] { border-color: #ffcccc; border-left-color: var(--q1); color: var(--q1); }
-        .calendar-task[data-q="q2"] { border-color: #ffe680; border-left-color: var(--q2); color: var(--q2-text); }
-        .calendar-task[data-q="q3"] { border-color: #bbdefb; border-left-color: var(--q3); color: #1565C0; }
-        .calendar-task[data-q="q4"] { border-color: #e0e0e0; border-left-color: var(--q4); color: #616161; }
-        
-        .calendar-task.is-completed { background: var(--completed); color: white !important; border-color: #388e3c; border-left-color: #1b5e20; }
+        .calendar-task { background: white; border: 1px solid #ccc; padding: 6px; border-radius: 4px; font-size: 13px; cursor: pointer; border-left: 4px solid #666; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: 0.3s; }
+        .calendar-task.is-completed { background: var(--completed); color: white; border-color: #388e3c; border-left-color: #1b5e20; }
         .calendar-task.is-completed .note-title { color: #e0f2f1; }
-        
-        .note-title { display: block; font-size: 11px; color: #666; margin-top: 4px; font-style: italic; font-weight: normal; }
+        .note-title { display: block; font-size: 11px; color: #666; margin-top: 4px; font-style: italic; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; }
@@ -109,10 +89,10 @@
 
         @media (max-width: 768px) {
             .main-content { flex-direction: column; overflow-y: auto; }
-            .sidebar { overflow-y: visible; height: auto; flex: none; max-width: none; }
+            .sidebar { overflow-y: visible; height: auto; flex: none; }
             .quadrant-grid { display: flex; flex-direction: column; height: auto; }
             .list-section { min-height: 250px; } 
-            .calendar-view { min-height: 70vh; }
+            .calendar-view { min-height: 60vh; }
             #app-container { overflow-y: auto; }
         }
     </style>
@@ -135,13 +115,10 @@
 <div id="app-container">
     <header>
         <div class="controls">
-            <button onclick="changeMonth(-1)">◀ 上月</button>
-            <div style="display: flex; gap: 5px;">
-                <select id="yearSelect" onchange="jumpToDate()"></select>
-                <select id="monthSelect" onchange="jumpToDate()"></select>
-            </div>
-            <button onclick="changeMonth(1)">下月 ▶</button>
-            <button onclick="goToToday()">回到本月</button>
+            <button onclick="changeWeek(-1)">◀ 上週</button>
+            <span id="currentWeekLabel" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+            <button onclick="changeWeek(1)">下週 ▶</button>
+            <button onclick="goToToday()">回到今日</button>
             <span id="syncStatus" class="cloud-status">☁️ 連線中...</span>
         </div>
         <div class="search-bar">
@@ -193,20 +170,7 @@
             </div>
         </div>
         
-        <div class="calendar-view">
-            <div class="calendar-inner">
-                <div class="calendar-header-days">
-                    <div class="day-name" style="color: #d32f2f;">日</div>
-                    <div class="day-name">一</div>
-                    <div class="day-name">二</div>
-                    <div class="day-name">三</div>
-                    <div class="day-name">四</div>
-                    <div class="day-name">五</div>
-                    <div class="day-name">六</div>
-                </div>
-                <div id="calendar-container" class="calendar-grid"></div>
-            </div>
-        </div>
+        <div class="calendar-view" id="calendar-container"></div>
     </div>
 </div>
 
@@ -253,6 +217,7 @@
 </div>
 
 <script>
+    // 👇 請將下面呢段換成你 Firebase 嘅 config 👇
     const firebaseConfig = {
         apiKey: "AIzaSyC7bLXkZDd7rZGj4NznZX6vlRms8klF1BY",
         authDomain: "my-todo-calendar-4a31f.firebaseapp.com",
@@ -262,6 +227,7 @@
         messagingSenderId: "290640214956",
         appId: "1:290640214956:web:49c05a14cd3ea7180f5809"
     };
+    // 👆 替換完畢 👆
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -269,756 +235,41 @@
 
     let currentUserUid = null;
     let state = { tasks: [], calendarTasks: [] };
-    
-    // 🌟 改變邏輯：以「本月1號」為基準
-    let currentMonthDisplay = new Date();
-    currentMonthDisplay.setDate(1);
+    let currentWeekStart = new Date();
+    currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); 
 
-    function initSelectors() {
-        const ys = document.getElementById('yearSelect');
-        const ms = document.getElementById('monthSelect');
-        
-        // 填充年份 (前後 10 年)
-        const currentYear = new Date().getFullYear();
-        for(let i = currentYear - 5; i <= currentYear + 10; i++) {
-            let opt = document.createElement('option');
-            opt.value = i; opt.innerText = i + "年";
-            ys.appendChild(opt);
-        }
-        
-        // 填充月份
-        for(let i = 0; i < 12; i++) {
-            let opt = document.createElement('option');
-            opt.value = i; opt.innerText = (i + 1) + "月";
-            ms.appendChild(opt);
-        }
-        updateSelects();
-    }
-
-    function updateSelects() {
-        document.getElementById('yearSelect').value = currentMonthDisplay.getFullYear();
-        document.getElementById('monthSelect').value = currentMonthDisplay.getMonth();
-    }
-
-    function jumpToDate() {
-        const y = parseInt(document.getElementById('yearSelect').value);
-        const m = parseInt(document.getElementById('monthSelect').value);
-        currentMonthDisplay = new Date(y, m, 1);
-        renderAll();
-    }
-
+    // 🌟 登入及權限管理系統
     auth.onAuthStateChanged((user) => {
         if (user) {
+            // 已登入：顯示主畫面，設定 UID，開始載入該使用者專屬資料
             currentUserUid = user.uid;
             document.getElementById('userNameDisplay').innerText = `👤 ${user.displayName || user.email}`;
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             
-            initSelectors();
-
+            // 監聽專屬資料夾 (users/UID/todoState)
             db.ref(`users/${currentUserUid}/todoState`).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     state.tasks = data.tasks || [];
                     state.calendarTasks = data.calendarTasks || [];
                 } else {
-                    state = { tasks: [], calendarTasks: [] }; 
+                    state = { tasks: [], calendarTasks: [] }; // 新帳戶清空
                 }
+                
                 const statusEl = document.getElementById('syncStatus');
                 statusEl.innerText = "✅ 雲端已同步";
                 statusEl.classList.add('status-sync');
+                
                 renderAll();
             });
         } else {
-            if (currentUserUid) db.ref(`users/${currentUserUid}/todoState`).off();
+            // 未登入：顯示登入畫面，隱藏主畫面，並清空舊有監聽器
+            if (currentUserUid) {
+                db.ref(`users/${currentUserUid}/todoState`).off(); // 關閉舊監聽
+            }
             currentUserUid = null;
-            state = { tasks: [], calendarTasks: [] }; 
-            document.getElementById('login-screen').style.display = 'flex';
-            document.getElementById('app-container').style.display = 'none';
-        }
-    });
-
-    function loginWithGoogle() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch((error) => alert("登入失敗：" + error.message));
-    }
-
-    function logout() { auth.signOut(); }
-
-    function saveData() {
-        if (!currentUserUid) return;
-        document.getElementById('syncStatus').innerText = "☁️ 儲存中...";
-        document.getElementById('syncStatus').classList.remove('status-sync');
-        db.ref(`users/${currentUserUid}/todoState`).set(state);
-    }
-
-    function backupToJSON() {
-        const dataStr = JSON.stringify(state, null, 4);
-        const blob = new Blob([dataStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const todayStr = new Date().toISOString().split('T')[0];
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `ToDoList_Backup_${todayStr}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-
-    function importFromJSON(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const uploadedData = JSON.parse(e.target.result);
-                if (uploadedData && typeof uploadedData === 'object' && Array.isArray(uploadedData.tasks)) {
-                    if (confirm("⚠️ 警告：載入備份會【完全覆蓋】你目前雲端嘅所有資料！確定繼續？")) {
-                        state.tasks = uploadedData.tasks || [];
-                        state.calendarTasks = uploadedData.calendarTasks || [];
-                        saveData(); 
-                        alert("✅ 成功回復資料！");
-                    }
-                } else {
-                    alert("❌ 檔案格式錯誤！");
-                }
-            } catch (err) {
-                alert("❌ 解析檔案失敗！");
-            }
-            event.target.value = ''; 
-        };
-        reader.readAsText(file);
-    }
-
-    function toggleCompletedZone() {
-        const zone = document.getElementById('completed-zone');
-        const icon = document.getElementById('completedToggleIcon');
-        if (zone.style.display === 'none') {
-            zone.style.display = 'flex'; icon.innerText = '▲';
-        } else {
-            zone.style.display = 'none'; icon.innerText = '▼';
-        }
-    }
-
-    function renderAll() { renderCalendar(); renderSidebarTasks(); }
-
-    function changeMonth(offset) {
-        currentMonthDisplay.setMonth(currentMonthDisplay.getMonth() + offset);
-        updateSelects();
-        renderAll();
-    }
-
-    function goToToday() {
-        currentMonthDisplay = new Date();
-        currentMonthDisplay.setDate(1);
-        updateSelects();
-        renderAll();
-    }
-
-    function formatDate(date) {
-        let y = date.getFullYear();
-        let m = String(date.getMonth() + 1).padStart(2, '0');
-        let d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
-
-    // 🌟 重寫為每月渲染邏輯
-    function renderCalendar() {
-        const container = document.getElementById('calendar-container');
-        container.innerHTML = '';
-        
-        let year = currentMonthDisplay.getFullYear();
-        let month = currentMonthDisplay.getMonth();
-        
-        let firstDay = new Date(year, month, 1).getDay(); // 該月第一日係星期幾 (0-6)
-        let daysInMonth = new Date(year, month + 1, 0).getDate(); // 該月有幾多日
-        let daysInPrevMonth = new Date(year, month, 0).getDate(); // 上個月有幾多日
-        
-        let totalCells = firstDay + daysInMonth;
-        let rows = Math.ceil(totalCells / 7); // 通常係 5，部分月份會係 6
-        
-        container.className = `calendar-grid ${rows === 6 ? 'six-rows' : ''}`;
-        
-        let dateCounter = 1;
-        let nextMonthCounter = 1;
-        let todayStr = formatDate(new Date());
-
-        for (let i = 0; i < rows * 7; i++) {
-            let cellDate;
-            let isOtherMonth = false;
-            
-            if (i < firstDay) {
-                cellDate = new Date(year, month - 1, daysInPrevMonth - firstDay + 1 + i);
-                isOtherMonth = true;
-            } else if (dateCounter <= daysInMonth) {
-                cellDate = new Date(year, month, dateCounter++);
-            } else {
-                cellDate = new Date(year, month + 1, nextMonthCounter++);
-                isOtherMonth = true;
-            }
-            
-            let dateStr = formatDate(cellDate);
-            let isToday = (dateStr === todayStr);
-            
-            let cell = document.createElement('div');
-            cell.className = 'day-cell';
-            cell.innerHTML = `
-                <div class="day-cell-header ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''}">
-                    ${cellDate.getMonth()+1}/${cellDate.getDate()}
-                </div>
-                <div class="day-dropzone" data-date="${dateStr}" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
-            `;
-            
-            let dayZone = cell.querySelector('.day-dropzone');
-            let tasksForDay = state.calendarTasks.filter(ct => ct.date === dateStr);
-            
-            tasksForDay.forEach(ct => {
-                let originalTask = state.tasks.find(t => t.id === ct.taskId);
-                if(!originalTask) return; 
-
-                let taskEl = document.createElement('div');
-                taskEl.className = `calendar-task ${originalTask.status === 'completed' ? 'is-completed' : ''}`;
-                taskEl.id = ct.id;
-                // 🌟 將原任務類別加入 Dataset 以觸發 CSS 變色
-                taskEl.dataset.q = originalTask.category;
-                taskEl.draggable = true;
-                taskEl.ondragstart = drag;
-                taskEl.ondblclick = () => openNoteModal(ct.id);
-
-                let contentHtml = `<span>${originalTask.title}</span>`;
-                if(ct.noteTitle) contentHtml += `<span class="note-title">${ct.noteTitle}</span>`;
-                taskEl.innerHTML = contentHtml;
-                dayZone.appendChild(taskEl);
-            });
-            container.appendChild(cell);
-        }
-    }
-
-    function renderSidebarTasks() {
-        ['q1', 'q2', 'q3', 'q4'].forEach(q => document.querySelector(`.task-dropzone[data-category="${q}"]`).innerHTML = '');
-        document.getElementById('completed-zone').innerHTML = '';
-
-        const keyword = document.getElementById('searchInput').value.toLowerCase();
-        const target = document.getElementById('searchTarget').value;
-
-        state.tasks.forEach(task => {
-            let matchTitle = task.title.toLowerCase().includes(keyword);
-            let matchContent = (task.content || "").toLowerCase().includes(keyword);
-            let isMatch = true;
-            if (keyword) {
-                if (target === 'title') isMatch = matchTitle;
-                else if (target === 'content') isMatch = matchContent;
-                else isMatch = matchTitle || matchContent;
-            }
-            if (!isMatch) return;
-
-            let card = document.createElement('div');
-            card.className = 'task-card';
-            card.id = task.id;
-            card.dataset.q = task.category;
-            
-            if (task.status === 'completed') {
-                card.classList.add('is-completed');
-                card.innerHTML = `
-                    <div style="margin-bottom:5px;">${task.title}</div>
-                    <div style="font-size:11px; color:#666;">完成於: ${task.completedAt}</div>
-                    <div class="task-actions">
-                        <button class="icon-btn" title="還原" onclick="toggleComplete('${task.id}')">🔄</button>
-                        <button class="icon-btn" title="徹底刪除" onclick="deleteTask('${task.id}')">🗑️</button>
-                    </div>
-                `;
-                document.getElementById('completed-zone').appendChild(card);
-            } else {
-                card.draggable = true;
-                card.ondragstart = drag;
-                card.ondblclick = () => openTaskModal(task.id); 
-                card.innerHTML = `
-                    <div>${task.title}</div>
-                    <div class="task-actions">
-                        <button class="icon-btn" title="完成" onclick="toggleComplete('${task.id}')">✅</button>
-                        <button class="icon-btn" title="刪除" onclick="deleteTask('${task.id}')">🗑️</button>
-                    </div>
-                `;
-                document.querySelector(`.task-dropzone[data-category="${task.category}"]`).appendChild(card);
-            }
-        });
-    }
-
-    function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
-
-    function openTaskModal(taskId = null) {
-        const modal = document.getElementById('taskModal');
-        if (taskId) {
-            const task = state.tasks.find(t => t.id === taskId);
-            document.getElementById('taskModalTitle').innerText = '編輯任務';
-            document.getElementById('editTaskId').value = task.id;
-            document.getElementById('taskTitle').value = task.title;
-            document.getElementById('taskContent').value = task.content;
-            document.getElementById('taskCategory').value = task.category;
-        } else {
-            document.getElementById('taskModalTitle').innerText = '新增任務';
-            document.getElementById('editTaskId').value = '';
-            document.getElementById('taskTitle').value = '';
-            document.getElementById('taskContent').value = '';
-            document.getElementById('taskCategory').value = 'q1';
-        }
-        modal.style.display = 'flex';
-    }
-
-    function saveTask() {
-        const id = document.getElementById('editTaskId').value;
-        const title = document.getElementById('taskTitle').value.trim();
-        const content = document.getElementById('taskContent').value.trim();
-        const category = document.getElementById('taskCategory').value;
-
-        if (!title) { alert('標題不能為空！'); return; }
-
-        if (id) {
-            let task = state.tasks.find(t => t.id === id);
-            task.title = title; task.content = content; task.category = category;
-        } else {
-            state.tasks.push({ id: 't_' + generateId(), title, content, category, status: 'active' });
-        }
-        closeModal('taskModal');
-        saveData();
-    }
-
-    function toggleComplete(taskId) {
-        let task = state.tasks.find(t => t.id === taskId);
-        if (task.status === 'active') {
-            task.status = 'completed';
-            let now = new Date();
-            task.completedAt = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-        } else {
-            task.status = 'active'; task.completedAt = null;
-        }
-        saveData();
-    }
-
-    function deleteTask(taskId) {
-        if(confirm("確定要徹底刪除此任務嗎？日曆上相關嘅排程亦會被移除。")) {
-            state.tasks = state.tasks.filter(t => t.id !== taskId);
-            state.calendarTasks = state.calendarTasks.filter(ct => ct.taskId !== taskId);
-            saveData();
-        }
-    }
-
-    function openNoteModal(calTaskId) {
-        const modal = document.getElementById('noteModal');
-        const ct = state.calendarTasks.find(c => c.id === calTaskId);
-        const originalTask = state.tasks.find(t => t.id === ct.taskId);
-
-        document.getElementById('editCalTaskId').value = ct.id;
-        document.getElementById('noteOriginTitle').innerText = originalTask.title;
-        document.getElementById('noteOriginContent').innerText = originalTask.content || '無內文';
-        document.getElementById('noteTitle').value = ct.noteTitle || '';
-        document.getElementById('noteContent').value = ct.noteContent || '';
-        modal.style.display = 'flex';
-    }
-
-    function saveNote() {
-        const id = document.getElementById('editCalTaskId').value;
-        let ct = state.calendarTasks.find(c => c.id === id);
-        if(ct) {
-            ct.noteTitle = document.getElementById('noteTitle').value.trim();
-            ct.noteContent = document.getElementById('noteContent').value.trim();
-        }
-        closeModal('noteModal');
-        saveData();
-    }
-
-    function deleteCalendarTask() {
-        const id = document.getElementById('editCalTaskId').value;
-        state.calendarTasks = state.calendarTasks.filter(c => c.id !== id);
-        closeModal('noteModal');
-        saveData();
-    }
-
-    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
-
-    function drag(ev) {
-        ev.dataTransfer.setData("text", ev.target.id);
-        setTimeout(() => ev.target.classList.add('dragging'), 0);
-    }
-    function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('dragover'); }
-    function leaveDrop(ev) { ev.currentTarget.classList.remove('dragover'); }
-
-    function drop(ev) {
-        ev.preventDefault();
-        ev.currentTarget.classList.remove('dragover');
-        
-        const draggedId = ev.dataTransfer.getData("text");
-        const targetZone = ev.currentTarget;
-        const isFromSidebar = draggedId.startsWith('t_');
-        const isFromCalendar = draggedId.startsWith('c_');
-
-        if (targetZone.classList.contains('day-dropzone')) {
-            const targetDate = targetZone.dataset.date;
-            if (isFromSidebar) {
-                let originalTask = state.tasks.find(t => t.id === draggedId);
-                if(originalTask.status === 'completed') { alert("已完成嘅任務不能再排程。"); return; }
-                state.calendarTasks.push({
-                    id: 'c_' + generateId(), taskId: draggedId, date: targetDate, noteTitle: '', noteContent: ''
-                });
-            } else if (isFromCalendar) {
-                let ct = state.calendarTasks.find(c => c.id === draggedId);
-                if(ct) ct.date = targetDate;
-            }
-        } 
-        else if (targetZone.classList.contains('task-dropzone') && targetZone.dataset.category) {
-            const newCategory = targetZone.dataset.category;
-            if (isFromSidebar) {
-                let task = state.tasks.find(t => t.id === draggedId);
-                if(task && task.status !== 'completed') task.category = newCategory;
-            } else if (isFromCalendar) {
-                state.calendarTasks = state.calendarTasks.filter(c => c.id !== draggedId);
-            }
-        }
-        saveData(); 
-    }
-
-    document.addEventListener('dragend', (ev) => {
-        if(ev.target.classList) ev.target.classList.remove('dragging');
-        document.querySelectorAll('.dragover').forEach(el => el.classList.remove('dragover'));
-    });
-</script>
-</body>
-</html><!DOCTYPE html>
-<html lang="zh-HK">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>四象限任務日曆系統 (每月視角 + 顏色連動版)</title>
-    <style>
-        :root {
-            --q1: #ff4d4d; --q2: #ffcc00; --q3: #2196F3; --q4: #9e9e9e;
-            --q2-text: #d4a000; /* 特別為 Q2 黃色設定較深嘅文字色，以防喺白底睇唔清 */
-            --completed: #4caf50; --bg: #f4f7f6; --text: #333;
-        }
-
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { margin: 0; padding: 0; background: var(--bg); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-
-        /* 🌟 登入畫面樣式 */
-        #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; color: white; position: fixed; top: 0; left: 0; width: 100%; z-index: 2000; }
-        #login-screen h1 { margin-bottom: 20px; }
-        .btn-google { background: white; color: #757575; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background 0.3s; }
-        .btn-google:hover { background: #f1f1f1; }
-        .btn-google img { width: 24px; height: 24px; }
-
-        /* 🌟 主程式畫面 */
-        #app-container { display: none; flex-direction: column; height: 100vh; padding: 10px; }
-
-        header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 10px; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
-        .controls, .search-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        input[type="text"], select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; font-weight: bold; }
-        button { padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; cursor: pointer; font-weight: bold; background: #eee; transition: 0.2s; white-space: nowrap; }
-        button:hover { background: #ddd; }
-        .btn-primary { background: #2c3e50; color: white; border: none; }
-        .btn-primary:hover { background: #1a252f; }
-        .btn-warning { background: #e67e22; color: white; border: none; }
-        .btn-warning:hover { background: #d35400; }
-        .btn-logout { background: #c0392b; color: white; border: none; }
-        .btn-logout:hover { background: #a93226; }
-        
-        .cloud-status { font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
-        .status-sync { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-
-        .main-content { display: flex; gap: 15px; flex: 1; min-height: 0; overflow: hidden; flex-direction: row; }
-        
-        .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 320px; max-width: 400px; overflow: hidden; padding-right: 5px; }
-        .quadrant-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
-        .list-section { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
-        .list-section h3 { margin: 0 0 10px 0; font-size: 14px; padding-bottom: 5px; border-bottom: 2px solid; flex-shrink: 0; }
-        
-        #q1-list h3 { border-color: var(--q1); color: var(--q1); }
-        #q2-list h3 { border-color: var(--q2); color: var(--q2-text); }
-        #q3-list h3 { border-color: var(--q3); color: var(--q3); }
-        #q4-list h3 { border-color: var(--q4); color: #666; }
-        
-        .completed-section { flex-shrink: 0; transition: max-height 0.3s ease; }
-        #completed-list h3 { border-color: var(--completed); color: var(--completed); margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; user-select: none; }
-
-        .task-dropzone { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 5px; border: 2px dashed transparent; border-radius: 4px; overflow-y: auto; min-height: 0; }
-        .task-dropzone.dragover { background: #f0f8ff; border-color: #2196F3; }
-        #completed-zone { margin-top: 10px; max-height: 250px; } 
-
-        /* 🌟 每月日曆視角全新佈局 */
-        .calendar-view { flex: 2; display: flex; flex-direction: column; overflow-x: auto; background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .calendar-inner { display: flex; flex-direction: column; flex: 1; min-width: 700px; /* 防止手機螢幕壓得太扁 */ }
-        .calendar-header-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 5px; flex-shrink: 0; }
-        .day-name { text-align: center; font-weight: bold; background: #e0e0e0; padding: 8px 5px; border-radius: 6px; font-size: 14px; }
-        
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(5, 1fr); gap: 5px; flex: 1; min-height: 0; }
-        .calendar-grid.six-rows { grid-template-rows: repeat(6, 1fr); } /* 處理某啲月份有 6 個星期嘅情況 */
-        
-        .day-cell { display: flex; flex-direction: column; background: #fafafa; border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
-        .day-cell-header { padding: 4px 8px; text-align: right; font-size: 12px; font-weight: bold; background: #f0f0f0; border-bottom: 1px solid #eee; }
-        .day-cell-header.today { background: #ffebee; color: #d32f2f; }
-        .day-cell-header.other-month { color: #ccc; background: #fdfdfd; }
-        .day-dropzone { flex: 1; padding: 4px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 40px; }
-        .day-dropzone.dragover { background: #e3f2fd; border: 1px dashed #2196F3; }
-
-        /* 🌟 任務卡片樣式 */
-        .task-card { background: white; border: 1px solid #ccc; border-left: 5px solid #ccc; padding: 8px; border-radius: 4px; cursor: grab; font-size: 14px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); user-select: none; }
-        .task-card.dragging { opacity: 0.5; }
-        .task-card[data-q="q1"] { border-left-color: var(--q1); }
-        .task-card[data-q="q2"] { border-left-color: var(--q2); }
-        .task-card[data-q="q3"] { border-left-color: var(--q3); }
-        .task-card[data-q="q4"] { border-left-color: var(--q4); }
-        .task-card.is-completed { border-left-color: var(--completed); background: #e8f5e9; color: #2e7d32; text-decoration: line-through; cursor: default; }
-        
-        .task-actions { margin-top: 5px; display: flex; gap: 5px; justify-content: flex-end; }
-        .icon-btn { background: none; border: none; cursor: pointer; padding: 2px; font-size: 12px; opacity: 0.6; }
-        .icon-btn:hover { opacity: 1; transform: scale(1.1); }
-
-        /* 🌟 日曆內任務樣式 (連動四象限顏色) */
-        .calendar-task { background: white; border: 1px solid #ccc; padding: 5px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; border-left: 4px solid #ccc; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: 0.3s; word-break: break-all; }
-        
-        /* 根據類別轉色 */
-        .calendar-task[data-q="q1"] { border-color: #ffcccc; border-left-color: var(--q1); color: var(--q1); }
-        .calendar-task[data-q="q2"] { border-color: #ffe680; border-left-color: var(--q2); color: var(--q2-text); }
-        .calendar-task[data-q="q3"] { border-color: #bbdefb; border-left-color: var(--q3); color: #1565C0; }
-        .calendar-task[data-q="q4"] { border-color: #e0e0e0; border-left-color: var(--q4); color: #616161; }
-        
-        .calendar-task.is-completed { background: var(--completed); color: white !important; border-color: #388e3c; border-left-color: #1b5e20; }
-        .calendar-task.is-completed .note-title { color: #e0f2f1; }
-        
-        .note-title { display: block; font-size: 11px; color: #666; margin-top: 4px; font-style: italic; font-weight: normal; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; }
-        .modal-content input, .modal-content textarea, .modal-content select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .modal-content textarea { resize: vertical; min-height: 100px; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-
-        @media (max-width: 768px) {
-            .main-content { flex-direction: column; overflow-y: auto; }
-            .sidebar { overflow-y: visible; height: auto; flex: none; max-width: none; }
-            .quadrant-grid { display: flex; flex-direction: column; height: auto; }
-            .list-section { min-height: 250px; } 
-            .calendar-view { min-height: 70vh; }
-            #app-container { overflow-y: auto; }
-        }
-    </style>
-    
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-</head>
-<body>
-
-<div id="login-screen">
-    <h1>🗓️ 專屬任務日曆系統</h1>
-    <p style="margin-bottom: 30px; text-align: center;">請登入以存取你嘅個人資料<br><small>(每人獨立存儲，互不干擾)</small></p>
-    <button class="btn-google" onclick="loginWithGoogle()">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo">
-        用 Google 帳戶登入
-    </button>
-</div>
-
-<div id="app-container">
-    <header>
-        <div class="controls">
-            <button onclick="changeMonth(-1)">◀ 上月</button>
-            <div style="display: flex; gap: 5px;">
-                <select id="yearSelect" onchange="jumpToDate()"></select>
-                <select id="monthSelect" onchange="jumpToDate()"></select>
-            </div>
-            <button onclick="changeMonth(1)">下月 ▶</button>
-            <button onclick="goToToday()">回到本月</button>
-            <span id="syncStatus" class="cloud-status">☁️ 連線中...</span>
-        </div>
-        <div class="search-bar">
-            <span id="userNameDisplay" style="font-size: 13px; color: #666; font-weight: bold;"></span>
-            
-            <select id="searchTarget">
-                <option value="both">標題+內文</option>
-                <option value="title">只找標題</option>
-                <option value="content">只找內文</option>
-            </select>
-            <input type="text" id="searchInput" placeholder="搜尋任務..." onkeyup="renderAll()">
-            
-            <input type="file" id="jsonUpload" accept=".json" style="display:none;" onchange="importFromJSON(event)">
-            <button class="btn-warning" onclick="document.getElementById('jsonUpload').click()" title="載入 JSON 覆蓋資料">📂 載入</button>
-            <button class="btn-warning" onclick="backupToJSON()" title="備份 JSON">💾 備份</button>
-            
-            <button class="btn-primary" onclick="openTaskModal()">➕ 新增任務</button>
-            <button class="btn-logout" onclick="logout()">登出</button>
-        </div>
-    </header>
-
-    <div class="main-content">
-        <div class="sidebar">
-            <div class="quadrant-grid">
-                <div class="list-section" id="q1-list">
-                    <h3>🚨 重要且緊急 (Q1)</h3>
-                    <div class="task-dropzone" data-category="q1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
-                </div>
-                <div class="list-section" id="q2-list">
-                    <h3>⭐ 重要不緊急 (Q2)</h3>
-                    <div class="task-dropzone" data-category="q2" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
-                </div>
-                <div class="list-section" id="q3-list">
-                    <h3>🔥 緊急不重要 (Q3)</h3>
-                    <div class="task-dropzone" data-category="q3" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
-                </div>
-                <div class="list-section" id="q4-list">
-                    <h3>☕ 不重要不緊急 (Q4)</h3>
-                    <div class="task-dropzone" data-category="q4" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
-                </div>
-            </div>
-            
-            <div class="list-section completed-section" id="completed-list">
-                <h3 onclick="toggleCompletedZone()" style="cursor: pointer;" title="點擊展開/收起">
-                    <span>✅ 完成清單</span>
-                    <span id="completedToggleIcon">▼</span>
-                </h3>
-                <div class="task-dropzone" id="completed-zone" style="display: none;"></div>
-            </div>
-        </div>
-        
-        <div class="calendar-view">
-            <div class="calendar-inner">
-                <div class="calendar-header-days">
-                    <div class="day-name" style="color: #d32f2f;">日</div>
-                    <div class="day-name">一</div>
-                    <div class="day-name">二</div>
-                    <div class="day-name">三</div>
-                    <div class="day-name">四</div>
-                    <div class="day-name">五</div>
-                    <div class="day-name">六</div>
-                </div>
-                <div id="calendar-container" class="calendar-grid"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal" id="taskModal">
-    <div class="modal-content">
-        <h3 id="taskModalTitle" style="margin-top:0;">新增任務</h3>
-        <input type="hidden" id="editTaskId">
-        <label>分類：</label>
-        <select id="taskCategory">
-            <option value="q1">重要且緊急 (Q1)</option>
-            <option value="q2">重要不緊急 (Q2)</option>
-            <option value="q3">緊急不重要 (Q3)</option>
-            <option value="q4">不重要不緊急 (Q4)</option>
-        </select>
-        <label>標題 (最多100字)：</label>
-        <input type="text" id="taskTitle" maxlength="100" placeholder="輸入標題...">
-        <label>內文 (不限字數)：</label>
-        <textarea id="taskContent" placeholder="輸入詳細內容..."></textarea>
-        <div class="modal-actions">
-            <button onclick="closeModal('taskModal')">取消</button>
-            <button class="btn-primary" onclick="saveTask()">儲存</button>
-        </div>
-    </div>
-</div>
-
-<div class="modal" id="noteModal">
-    <div class="modal-content">
-        <h3 style="margin-top:0;">日曆任務備註</h3>
-        <input type="hidden" id="editCalTaskId">
-        <div style="background:#f9f9f9; padding:10px; border-radius:4px; font-size:13px; margin-bottom:10px;">
-            <strong id="noteOriginTitle"></strong><br>
-            <span id="noteOriginContent" style="color:#666; white-space: pre-wrap;"></span>
-        </div>
-        <label>備註標題 (最多50字)：</label>
-        <input type="text" id="noteTitle" maxlength="50" placeholder="輸入備註標題...">
-        <label>備註內文 (不限字數)：</label>
-        <textarea id="noteContent" placeholder="輸入備註詳細內容..."></textarea>
-        <div class="modal-actions">
-            <button onclick="deleteCalendarTask()" style="background:#ffebee; color:#d32f2f; margin-right:auto;">🗑️ 從日曆移除</button>
-            <button onclick="closeModal('noteModal')">取消</button>
-            <button class="btn-primary" onclick="saveNote()">儲存備註</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyC7bLXkZDd7rZGj4NznZX6vlRms8klF1BY",
-        authDomain: "my-todo-calendar-4a31f.firebaseapp.com",
-        databaseURL: "https://my-todo-calendar-4a31f-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "my-todo-calendar-4a31f",
-        storageBucket: "my-todo-calendar-4a31f.firebasestorage.app",
-        messagingSenderId: "290640214956",
-        appId: "1:290640214956:web:49c05a14cd3ea7180f5809"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
-
-    let currentUserUid = null;
-    let state = { tasks: [], calendarTasks: [] };
-    
-    // 🌟 改變邏輯：以「本月1號」為基準
-    let currentMonthDisplay = new Date();
-    currentMonthDisplay.setDate(1);
-
-    function initSelectors() {
-        const ys = document.getElementById('yearSelect');
-        const ms = document.getElementById('monthSelect');
-        
-        // 填充年份 (前後 10 年)
-        const currentYear = new Date().getFullYear();
-        for(let i = currentYear - 5; i <= currentYear + 10; i++) {
-            let opt = document.createElement('option');
-            opt.value = i; opt.innerText = i + "年";
-            ys.appendChild(opt);
-        }
-        
-        // 填充月份
-        for(let i = 0; i < 12; i++) {
-            let opt = document.createElement('option');
-            opt.value = i; opt.innerText = (i + 1) + "月";
-            ms.appendChild(opt);
-        }
-        updateSelects();
-    }
-
-    function updateSelects() {
-        document.getElementById('yearSelect').value = currentMonthDisplay.getFullYear();
-        document.getElementById('monthSelect').value = currentMonthDisplay.getMonth();
-    }
-
-    function jumpToDate() {
-        const y = parseInt(document.getElementById('yearSelect').value);
-        const m = parseInt(document.getElementById('monthSelect').value);
-        currentMonthDisplay = new Date(y, m, 1);
-        renderAll();
-    }
-
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            currentUserUid = user.uid;
-            document.getElementById('userNameDisplay').innerText = `👤 ${user.displayName || user.email}`;
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('app-container').style.display = 'flex';
-            
-            initSelectors();
-
-            db.ref(`users/${currentUserUid}/todoState`).on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    state.tasks = data.tasks || [];
-                    state.calendarTasks = data.calendarTasks || [];
-                } else {
-                    state = { tasks: [], calendarTasks: [] }; 
-                }
-                const statusEl = document.getElementById('syncStatus');
-                statusEl.innerText = "✅ 雲端已同步";
-                statusEl.classList.add('status-sync');
-                renderAll();
-            });
-        } else {
-            if (currentUserUid) db.ref(`users/${currentUserUid}/todoState`).off();
-            currentUserUid = null;
-            state = { tasks: [], calendarTasks: [] }; 
+            state = { tasks: [], calendarTasks: [] }; // 清空本地數據
             document.getElementById('login-screen').style.display = 'flex';
             document.getElementById('app-container').style.display = 'none';
         }
@@ -1035,6 +286,7 @@
         auth.signOut();
     }
 
+    // 🌟 儲存數據 (寫入專屬資料夾)
     function saveData() {
         if (!currentUserUid) return;
         document.getElementById('syncStatus').innerText = "☁️ 儲存中...";
@@ -1042,6 +294,7 @@
         db.ref(`users/${currentUserUid}/todoState`).set(state);
     }
 
+    // 🌟 匯出 JSON 功能
     function backupToJSON() {
         const dataStr = JSON.stringify(state, null, 4);
         const blob = new Blob([dataStr], { type: "application/json" });
@@ -1056,9 +309,11 @@
         URL.revokeObjectURL(url);
     }
 
+    // 🌟 匯入/載入 JSON 功能
     function importFromJSON(event) {
         const file = event.target.files[0];
         if (!file) return;
+        
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
@@ -1071,38 +326,41 @@
                         alert("✅ 成功回復資料！");
                     }
                 } else {
-                    alert("❌ 檔案格式錯誤！");
+                    alert("❌ 檔案格式錯誤，請確保係之前備份嘅 To-Do List JSON 檔案！");
                 }
             } catch (err) {
-                alert("❌ 解析檔案失敗！");
+                alert("❌ 解析檔案失敗，請檢查檔案是否損壞！");
             }
             event.target.value = ''; 
         };
         reader.readAsText(file);
     }
 
+    // 🌟 摺疊/展開 完成清單功能
     function toggleCompletedZone() {
         const zone = document.getElementById('completed-zone');
         const icon = document.getElementById('completedToggleIcon');
+        
         if (zone.style.display === 'none') {
-            zone.style.display = 'flex'; icon.innerText = '▲';
+            zone.style.display = 'flex';
+            icon.innerText = '▲';
         } else {
-            zone.style.display = 'none'; icon.innerText = '▼';
+            zone.style.display = 'none';
+            icon.innerText = '▼';
         }
     }
 
+    // UI 渲染及其他業務邏輯 (無需修改，保持原樣)
     function renderAll() { renderCalendar(); renderSidebarTasks(); }
 
-    function changeMonth(offset) {
-        currentMonthDisplay.setMonth(currentMonthDisplay.getMonth() + offset);
-        updateSelects();
+    function changeWeek(offset) {
+        currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
         renderAll();
     }
 
     function goToToday() {
-        currentMonthDisplay = new Date();
-        currentMonthDisplay.setDate(1);
-        updateSelects();
+        currentWeekStart = new Date();
+        currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
         renderAll();
     }
 
@@ -1113,54 +371,33 @@
         return `${y}-${m}-${d}`;
     }
 
-    // 🌟 重寫為每月渲染邏輯
     function renderCalendar() {
         const container = document.getElementById('calendar-container');
         container.innerHTML = '';
+        const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
         
-        let year = currentMonthDisplay.getFullYear();
-        let month = currentMonthDisplay.getMonth();
-        
-        let firstDay = new Date(year, month, 1).getDay(); // 該月第一日係星期幾 (0-6)
-        let daysInMonth = new Date(year, month + 1, 0).getDate(); // 該月有幾多日
-        let daysInPrevMonth = new Date(year, month, 0).getDate(); // 上個月有幾多日
-        
-        let totalCells = firstDay + daysInMonth;
-        let rows = Math.ceil(totalCells / 7); // 通常係 5，部分月份會係 6
-        
-        container.className = `calendar-grid ${rows === 6 ? 'six-rows' : ''}`;
-        
-        let dateCounter = 1;
-        let nextMonthCounter = 1;
-        let todayStr = formatDate(new Date());
+        let weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        document.getElementById('currentWeekLabel').innerText = `${formatDate(currentWeekStart)} 至 ${formatDate(weekEnd)}`;
 
-        for (let i = 0; i < rows * 7; i++) {
-            let cellDate;
-            let isOtherMonth = false;
+        const today = new Date();
+        const todayStr = formatDate(today);
+
+        for (let i = 0; i < 7; i++) {
+            let colDate = new Date(currentWeekStart);
+            colDate.setDate(colDate.getDate() + i);
+            let dateStr = formatDate(colDate);
             
-            if (i < firstDay) {
-                cellDate = new Date(year, month - 1, daysInPrevMonth - firstDay + 1 + i);
-                isOtherMonth = true;
-            } else if (dateCounter <= daysInMonth) {
-                cellDate = new Date(year, month, dateCounter++);
-            } else {
-                cellDate = new Date(year, month + 1, nextMonthCounter++);
-                isOtherMonth = true;
-            }
-            
-            let dateStr = formatDate(cellDate);
-            let isToday = (dateStr === todayStr);
-            
-            let cell = document.createElement('div');
-            cell.className = 'day-cell';
-            cell.innerHTML = `
-                <div class="day-cell-header ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''}">
-                    ${cellDate.getMonth()+1}/${cellDate.getDate()}
+            let col = document.createElement('div');
+            col.className = 'day-column';
+            col.innerHTML = `
+                <div class="day-header ${dateStr === todayStr ? 'today' : ''}">
+                    ${days[i]}<br><small>${colDate.getMonth()+1}/${colDate.getDate()}</small>
                 </div>
                 <div class="day-dropzone" data-date="${dateStr}" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)"></div>
             `;
             
-            let dayZone = cell.querySelector('.day-dropzone');
+            let dayZone = col.querySelector('.day-dropzone');
             let tasksForDay = state.calendarTasks.filter(ct => ct.date === dateStr);
             
             tasksForDay.forEach(ct => {
@@ -1170,18 +407,16 @@
                 let taskEl = document.createElement('div');
                 taskEl.className = `calendar-task ${originalTask.status === 'completed' ? 'is-completed' : ''}`;
                 taskEl.id = ct.id;
-                // 🌟 將原任務類別加入 Dataset 以觸發 CSS 變色
-                taskEl.dataset.q = originalTask.category;
                 taskEl.draggable = true;
                 taskEl.ondragstart = drag;
                 taskEl.ondblclick = () => openNoteModal(ct.id);
 
-                let contentHtml = `<span>${originalTask.title}</span>`;
+                let contentHtml = `<strong>${originalTask.title}</strong>`;
                 if(ct.noteTitle) contentHtml += `<span class="note-title">${ct.noteTitle}</span>`;
                 taskEl.innerHTML = contentHtml;
                 dayZone.appendChild(taskEl);
             });
-            container.appendChild(cell);
+            container.appendChild(col);
         }
     }
 
