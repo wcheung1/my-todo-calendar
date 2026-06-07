@@ -1026,10 +1026,14 @@
 
     function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch((error) => alert("登入失敗：" + error.message));
+        auth.signInWithPopup(provider).catch((error) => {
+            alert("登入失敗：" + error.message);
+        });
     }
 
-    function logout() { auth.signOut(); }
+    function logout() {
+        auth.signOut();
+    }
 
     function saveData() {
         if (!currentUserUid) return;
